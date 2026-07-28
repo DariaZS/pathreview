@@ -23,3 +23,16 @@ The application logs through structlog, but structlog isn't configured to propag
 **Setup confirmation:** [x] App runs locally at localhost:5173
 
 **Cohort ledger:** [x] Issue added to cohort ledger
+
+
+## Week 8 — Reproduction & solution planning
+
+**Reproduction commit link:** [will fill in after commit]
+
+**Reproduction summary:**
+Ran `tests/unit/test_batch_processor.py::test_empty_chunks_list_returns_empty` and confirmed the failure: the warning "Empty chunks list provided to BatchEmbeddingProcessor" appears in captured stdout, but `caplog.text` and `caplog.records` are both empty, so the assertion fails. Traced the root cause to `core/logging.py`: `configure_logging()` wires structlog into Python's stdlib `logging` module (which `caplog` listens to), but this function is never actually called anywhere in the codebase — not in tests, not even at app startup in `api/main.py`. As a result, structlog falls back to its default `PrintLoggerFactory`, which writes straight to stdout and bypasses stdlib logging entirely.
+
+**PLAN.md link:** [will fill in after commit]
+
+**Blockers or open questions:**
+None yet — root cause is clear. Still deciding exact scope of the fix (test-only fixture vs. also wiring configure_logging() into app startup).
