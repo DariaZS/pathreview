@@ -56,7 +56,7 @@ None — the plan from Week 8 held up as written.
 
 **Branch:** `fix/159-structured-caplog-fix`
 
-**PR link:** [\[add once opened\]](https://github.com/DariaZS/pathreview/pull/784)
+**PR link:** `https://github.com/DariaZS/pathreview/pull/784`
 
 **What was built:**
 Added an `autouse`, session-scoped pytest fixture in `tests/conftest.py` that calls the existing (but previously unused) `configure_logging()` function before the test session starts. This routes structlog through Python's stdlib `logging` module, so pytest's `caplog` fixture can correctly capture structlog events — fixing suite-wide log assertion failures described in issue #159.
