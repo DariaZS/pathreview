@@ -60,4 +60,5 @@ Output: after the fix, structlog log calls made during tests will produce stdlib
 - Multiple tests running in the same session with `cache_logger_on_first_use=True` — confirm a logger configured in one test doesn't carry stale state into the next.
 - Tests that already inspect stdout directly (e.g. via `capsys`) instead of `caplog` — confirm they still pass once output also starts flowing through stdlib logging (could result in duplicate output if both stdout print and logging handler are active).
 
-
+### Outcome
+Implemented steps 1–3 and 5 as planned. Step 4 (wiring `configure_logging()` into `api/main.py`) was deliberately deferred — flagged as a follow-up issue in the PR's "Notes for Reviewers" rather than bundled into this fix, to keep the PR scoped to the test-capture bug in #159.

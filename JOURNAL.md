@@ -36,3 +36,34 @@ Ran `tests/unit/test_batch_processor.py::test_empty_chunks_list_returns_empty` a
 
 **Blockers or open questions:**
 None yet — root cause is clear. Still deciding exact scope of the fix (test-only fixture vs. also wiring configure_logging() into app startup).
+
+## Week 9 — Implementation & PR submission
+
+### Check-in 1 (mid-week)
+
+**Progress:**
+Completed Plan step 1 (added `configure_logging()` fixture to `tests/conftest.py`) and step 2 (confirmed `tests/unit/test_batch_processor.py::test_empty_chunks_list_returns_empty` now passes, up from 141s cold-run to 0.37s once cached). Verified via `git stash` that the 52 pre-existing failures found in `make test-all` are unrelated to this fix — identical failures occur with or without the fixture in place.
+
+**Next steps:**
+Add a dedicated regression test that directly exercises the fix (not just an existing test that benefits from it), run the repo-wide lint/type checks, and open the PR.
+
+**Blockers:**
+None — the plan from Week 8 held up as written.
+
+---
+
+### Check-in 2 (end of week)
+
+**Branch:** `fix/159-structured-caplog-fix`
+
+**PR link:** [add once opened]
+
+**What was built:**
+Added an `autouse`, session-scoped pytest fixture in `tests/conftest.py` that calls the existing (but previously unused) `configure_logging()` function before the test session starts. This routes structlog through Python's stdlib `logging` module, so pytest's `caplog` fixture can correctly capture structlog events — fixing suite-wide log assertion failures described in issue #159.
+
+**Tests:**
+Added `tests/unit/test_logging_config.py::test_configure_logging_enables_caplog_capture` — a new regression test that directly verifies structlog output reaches `caplog.text` (independent of any other test's behavior). Also confirmed the originally-failing test, `tests/unit/test_batch_processor.py::test_empty_chunks_list_returns_empty`, now passes.
+
+**Self-review:**
+- [x] `make check` passes for this PR's files — repo-wide `make check` fails due to 182 pre-existing lint errors in unrelated test files (unsorted imports, unused variables, long lines — none in files this PR touches). Verified `ruff check tests/conftest.py tests/unit/test_logging_config.py` passes cleanly, and `black`/`mypy` passed via pre-commit hooks on every commit in this PR.
+- [x] `make test-unit` passes for files touched by this PR (verified individually; full-suite run surfaces the 52 pre-existing unrelated failures noted above)
