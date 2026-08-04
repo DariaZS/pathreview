@@ -61,18 +61,3 @@ Output: after the fix, structlog log calls made during tests will produce stdlib
 - Tests that already inspect stdout directly (e.g. via `capsys`) instead of `caplog` — confirm they still pass once output also starts flowing through stdlib logging (could result in duplicate output if both stdout print and logging handler are active).
 
 
-## Summary
-Fixes #159 — structlog log output was not visible to pytest's `caplog` fixture, causing log-based test assertions to fail even though logging worked correctly.
-
-## Root cause
-`configure_logging()` in `core/logging.py` wires structlog into Python's stdlib `logging` module (which `caplog` listens to via `structlog.stdlib.LoggerFactory()`). This function was fully implemented but never actually called anywhere — not in tests, and not at app startup. As a result, structlog fell back to its default `PrintLoggerFactory`, writing directly to stdout and bypassing stdlib logging entirely.
-
-## Fix
-Added an `autouse`, session-scoped fixture in `tests/conftest.py` that calls `configure_logging()` before the test session starts, ensuring structlog routes through stdlib logging during tests.
-
-## Testing
-- `tests/unit/test_batch_processor.py::test_empty_chunks_list_returns_empty` — previously failed with empty `caplog.text`, now passes
-- Ran full suite (`make test-all`) to confirm no regressions
-
-## Notes
-`configure_logging()` is also never called in `api/main.py` at app startup — outside the scope of this fix, but worth flagging as a separate follow-up issue.
