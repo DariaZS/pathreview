@@ -7,6 +7,29 @@ Expected: log events emitted via structlog (e.g. the "Empty chunks list" warning
 
 Actual: structlog is never configured in the test environment — `configure_logging()` in `core/logging.py`, which wires structlog into stdlib logging via `structlog.stdlib.LoggerFactory()`, is defined but never called anywhere in the codebase (not in tests, not even at app startup in `api/main.py`). Without it, structlog falls back to its default `PrintLoggerFactory`, which writes directly to stdout and never touches stdlib logging — so `caplog` sees nothing, even though the log call happened correctly.
 
+
+### Log flow — before the fix
+
+```mermaid
+flowchart LR
+    A[App code calls log.warning] --> B[structlog default PrintLoggerFactory]
+    B --> C[stdout]
+    D[pytest caplog] -.->|listens to| E[stdlib logging root logger]
+    E -.->|never receives events| F[caplog.records stays empty]
+```
+
+### Log flow — after the fix
+
+```mermaid
+flowchart LR
+    A[App code calls log.warning] --> B[structlog.stdlib.LoggerFactory]
+    B --> C[stdlib logging root logger]
+    C --> D[stdout]
+    C --> E[pytest caplog handler]
+    E --> F[caplog.records populated correctly]
+```
+
+
 ### Map
 - `core/logging.py` — contains `configure_logging()`, the function that sets up structlog's processor chain and routes it through stdlib logging. This is the function that needs to be invoked.
 - `tests/conftest.py` — currently has no logging-related fixtures at all; this is where the fix will likely live (a fixture that calls `configure_logging()` before each test, or once per session).
@@ -36,3 +59,20 @@ Output: after the fix, structlog log calls made during tests will produce stdlib
 - Tests that check for the *absence* of log output (e.g. asserting no warnings were logged) — must still pass once logging is actually wired up, not just tests expecting a positive match.
 - Multiple tests running in the same session with `cache_logger_on_first_use=True` — confirm a logger configured in one test doesn't carry stale state into the next.
 - Tests that already inspect stdout directly (e.g. via `capsys`) instead of `caplog` — confirm they still pass once output also starts flowing through stdlib logging (could result in duplicate output if both stdout print and logging handler are active).
+
+
+## Summary
+Fixes #159 — structlog log output was not visible to pytest's `caplog` fixture, causing log-based test assertions to fail even though logging worked correctly.
+
+## Root cause
+`configure_logging()` in `core/logging.py` wires structlog into Python's stdlib `logging` module (which `caplog` listens to via `structlog.stdlib.LoggerFactory()`). This function was fully implemented but never actually called anywhere — not in tests, and not at app startup. As a result, structlog fell back to its default `PrintLoggerFactory`, writing directly to stdout and bypassing stdlib logging entirely.
+
+## Fix
+Added an `autouse`, session-scoped fixture in `tests/conftest.py` that calls `configure_logging()` before the test session starts, ensuring structlog routes through stdlib logging during tests.
+
+## Testing
+- `tests/unit/test_batch_processor.py::test_empty_chunks_list_returns_empty` — previously failed with empty `caplog.text`, now passes
+- Ran full suite (`make test-all`) to confirm no regressions
+
+## Notes
+`configure_logging()` is also never called in `api/main.py` at app startup — outside the scope of this fix, but worth flagging as a separate follow-up issue.
