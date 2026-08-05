@@ -67,3 +67,34 @@ Added `tests/unit/test_logging_config.py::test_configure_logging_enables_caplog_
 **Self-review:**
 - [x] `make check` passes for this PR's files — repo-wide `make check` fails due to 182 pre-existing lint errors in unrelated test files (unsorted imports, unused variables, long lines — none in files this PR touches). Verified `ruff check tests/conftest.py tests/unit/test_logging_config.py` passes cleanly, and `black`/`mypy` passed via pre-commit hooks on every commit in this PR.
 - [x] `make test-unit` passes for files touched by this PR (verified individually; full-suite run surfaces the 52 pre-existing unrelated failures noted above)
+
+## Week 10 — Iteration & reflection
+
+### Reviewer feedback
+
+**Feedback received:** [ ] Yes  [x] No — still awaiting review
+
+**Summary of feedback:**
+No reviewer feedback came in - per the course note, revewer feedback isn't an active feature in Summer 20206
+
+**How you responded:**
+N/A - no feedback to respond to.
+
+---
+
+### Reflection
+
+**What was harder than you expected?**
+Verifying my fix didn't break anything else was harder than the fix itself. Running the full suite surfaces 52 failing tests, and my first reaction was to assume I'd caused them. Instead of guessing, I used `git stash` to remove my change and re-ran the same failing tests - they failed identically without my fix in place, confirming they were pre-existing. That extra step took real time, but it's the difference between an assumption and something I could defend in a PR.
+
+**What did you learn about working in a large codebase?**
+The biggest surprise wasn't a bug - it was dead code. `configure_logging()` was fully written, well-documented, and looked production-ready, but it was never actually called anywhere, not even at app startup. In my own projects, if I write a function, I call it. In a larger codebase, a funcion can exist, look correct, and still not be wired in. That's a different kind of but to look for, not just 'does this work' but 'does anything actually using this.'
+
+**How did AI tools help — and where did they fall short?**
+AI was most useful for keeping me moving in small, verifiable steps when I was exhausted and pulled in a lot of different directions this week - reproducing the bug methodically, writing the regression test, and catching things I'd have skipped under pressure (such as skipping `ruff` to just my changed files, or checkign `CONTRIBUTING.md` for the correct brunch naming convention before opening the PR). Where it fell short: it can't run my terminal, restart Docker, or notice a typo like `make test all` instead of `make test-all`, I still had to debug my environment.
+
+**What would you do differently if you started over?**
+I'd read the brunch naming convention in `CONTRIBUTING.md` before creating my brunch in Week 7, instead of discovering the mismatch (`docs/` vs `fix/`) in Week 9 and having to rename it later.
+
+**What are you most proud of from this module?**
+Catching that 'Tests Adequately Cover The Changes' was still an open gap, even after my fix already worked. It would've been easy to submit once the original failing test passed, but I noticed the difference between a test that *benefits* from my fix and one that *directly verifies* it, and wrote `test_logging_config.py` to close that gap before submitting
